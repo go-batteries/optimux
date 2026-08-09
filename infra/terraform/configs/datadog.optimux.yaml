@@ -1,0 +1,27 @@
+init_config:
+
+instances:
+  - nginx_status_url: "${nginx_status_url}"
+    tags:
+      - env:${env}
+      - service:optimux
+logs:
+  - type: file
+    path: /mnt/log/nginx/access.log
+    service: optimux
+    source: nginx
+
+  - type: file
+    path: /mnt/log/nginx/error.log
+    service: optimux
+    source: nginx
+
+  - type: file
+    path: /mnt/log/app.log
+    service: optimux
+    source: custom
+
+  - type: file
+    path: /mnt/log/app.err
+    service: optimux
+    source: custom

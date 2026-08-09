@@ -1,0 +1,104 @@
+actions:
+  # Video compression with configurable resolution
+  - name: compress_video
+    defaults:
+      quality: 23
+      preset: medium
+      format: mp4
+      width: 640      # Default: 360p
+      height: 360     # Can be overridden: 720p (1280x720), 1080p (1920x1080)
+    executors:
+      - type: exec
+        command: >
+          ffmpeg -i {{.input}} -c:v libx264 -crf {{.quality}} 
+          -preset {{.preset}} -vf scale={{.width}}:{{.height}} 
+          -c:a aac -b:a 128k {{.output}}
+
+  - name: generate_sprites
+    defaults:
+      fps: 5
+      tile_width: 160
+      tile_height: 90
+      tile_layout: "10x5"
+      format: webp
+      quality: 75
+      threads: 2
+      hwaccel: ""  # Set via env: FFMPEG_HWACCEL=vaapi|videotoolbox|none
+    executors:
+      - type: exec
+        command: >
+          ffmpeg -threads {{.threads}} {{if .hwaccel}}-hwaccel {{.hwaccel}}{{end}} -i {{.input}} 
+          -vf fps={{.fps}},scale={{.tile_width}}:{{.tile_height}}:flags=fast_bilinear,tile={{.tile_layout}} 
+          -an -c:v libwebp -quality {{.quality}} -compression_level 4 -y {{.output}}
+
+  - name: scene_breakdown
+    defaults:
+      segment_duration: 1.0
+      format: mp4
+      quality: 23
+    executors:
+      - type: exec
+        command: >
+          ffmpeg -i {{.input}} -c:v libx264 -crf {{.quality}} 
+          -f segment -segment_time {{.segment_duration}} 
+          -reset_timestamps 1 -map 0 {{.output_pattern}}
+
+  - name: extract_frames
+    defaults:
+      fps: 13
+      format: jpg
+      quality: 2
+      start_time: 0
+      duration: 10
+    executors:
+      - type: exec
+        command: >
+          ffmpeg -i {{.input}} -ss {{.start_time}} -t {{.duration}} 
+          -vf fps={{.fps}} -q:v {{.quality}} {{.output_pattern}}
+
+  - name: extract_frames_with_boundaries
+    defaults:
+      fps: 13
+      format: jpg
+      quality: 2
+      start_time: 0
+      duration: 1
+      x: 0
+      y: 0
+      width: -1
+      height: -1
+    executors:
+      - type: exec
+        command: >
+          ffmpeg -i {{.input}} -ss {{.start_time}} -t {{.duration}} 
+          -vf "crop={{.width}}:{{.height}}:{{.x}}:{{.y}},fps={{.fps}}" 
+          -q:v {{.quality}} {{.output_pattern}}
+
+  - name: probe_video
+    defaults:
+      format: json
+    executors:
+      - type: exec
+        command: >
+          ffprobe -v quiet -print_format {{.format}} 
+          -show_format -show_streams {{.input}}
+
+  - name: generate_webvtt
+    defaults:
+      sprite_url: "/sprites/{{.video_id}}.webp"
+      tile_width: 160
+      tile_height: 90
+      frames_per_row: 5
+    executors:
+      - type: template
+        template: |
+          WEBVTT
+
+          00:00:00.000 --> 00:00:01.000
+          {{.sprite_url}}#xywh=0,0,{{.tile_width}},{{.tile_height}}
+
+          00:00:01.000 --> 00:00:02.000
+          {{.sprite_url}}#xywh={{.tile_width}},0,{{.tile_width}},{{.tile_height}}
+
+          00:00:02.000 --> 00:00:03.000
+          {{.sprite_url}}#xywh=320,0,{{.tile_width}},{{.tile_height}}

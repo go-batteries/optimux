@@ -1,0 +1,5 @@
+tmp/
+.git/
+
+infra/terraform/*
+scripts/

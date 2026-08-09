@@ -1,0 +1,231 @@
+[
+  {
+    "name": "dnsdock",
+    "image": "aacebedo/dnsdock:v1.17.0-amd64",
+    "essential": false,
+    "cpu": 128,
+    "memory": 128,
+    "command": [
+      "--nameserver=8.8.8.8:53"
+    ],
+    "portMappings": [
+      {
+        "containerPort": 53,
+        "hostPort": 53,
+        "protocol": "udp"
+      },
+      {
+        "containerPort": 53,
+        "hostPort": 53,
+        "protocol": "tcp"
+      }
+    ],
+    "mountPoints": [
+      {
+        "sourceVolume": "docker_sock",
+        "containerPath": "/var/run/docker.sock"
+      }
+    ]
+  },
+  {
+    "name": "datadog-agent",
+    "image": "gcr.io/datadoghq/agent:7.64.2",
+    "cpu": 256,
+    "memory": 256,
+    "essential": false,
+    "hostname": "datadog-agent",
+    "dockerLabels" : {
+      "com.dnsdock.name": "datadog-agent"
+    },
+    "dependsOn": [
+      { "containerName": "dnsdock", "condition": "START" }
+    ],
+    "dnsServers": ["172.17.0.1"],
+    "environment": [
+      { "name": "DD_API_KEY", "value": "${DD_API_KEY}" },
+      { "name": "ECS_FARGATE", "value": "false" },
+      { "name": "DD_LOGS_ENABLED", "value": "true" },
+      { "name": "DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL", "value": "true" },
+      { "name": "DD_DOGSTATSD_NON_LOCAL_TRAFFIC", "value": "true" },
+      { "name": "DD_DOGSTATSD_PORT", "value": "8125" },
+      { "name": "DD_APM_ENABLED", "value": "true" },
+      { "name": "DD_SITE", "value": "${DATADOG_SITE}" },
+      { "name": "DD_TRACE_128_BIT_TRACEID_GENERATION_ENABLED", "value": "false" },
+      { "name": "DD_SERVICE", "value": "${DD_SERVICE}" },
+      { "name": "DD_HOST_PROC", "value": "/host/proc" },
+      { "name": "DD_HOST_SYS", "value": "/host/sys" }
+    ],
+    "linuxParameters": {
+      "capabilities": {
+        "add": [
+          "SYS_ADMIN",
+          "NET_ADMIN",
+          "SYS_PTRACE"
+        ]
+      }
+    },
+    "portMappings": [
+    {
+      "containerPort": 8125,
+      "protocol": "udp"
+    }
+    ],
+    "mountPoints": [
+    {
+      "sourceVolume": "app_logs",
+      "containerPath": "/mnt/log",
+      "readOnly": true
+    },
+    {
+        "sourceVolume": "proc",
+        "containerPath": "/host/proc",
+        "readOnly": true
+      },
+      {
+        "sourceVolume": "sys",
+        "containerPath": "/host/sys",
+        "readOnly": true
+      }
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/ecs/service",
+        "awslogs-region": "${AWS_REGION}",
+        "awslogs-create-group": "true",
+        "awslogs-stream-prefix": "${APP_NAME}-datadog"
+      }
+    }
+  }, 
+  {
+    "essential": false,
+    "hostname": "${APP_NAME}-sidecar-cleaner",
+    "name": "${APP_NAME}-sidecar-cleaner",
+    "cpu": 128,
+    "memory": 128,
+    "dockerLabels" : {
+      "com.dnsdock.name": "${APP_NAME}-sidecar-cleaner"
+    },
+    "image": "${CLEANER_SIDECAR_IMAGE}",
+    "repositoryCredentials": {
+      "credentialsParameter": "${DOCKER_CREDS}"
+    },
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/ecs/service",
+        "awslogs-region": "${AWS_REGION}",
+        "awslogs-create-group": "true",
+        "awslogs-stream-prefix": "${APP_NAME}-sidecar-cleaner"
+      }
+    },
+    "mountPoints": [
+    {
+      "containerPath": "/mnt/cache",
+      "sourceVolume": "image_cache",
+      "readOnly": false
+    }
+    ]
+  },
+  {
+    "essential": true,
+    "memory": 9216,
+    "name": "${APP_NAME}",
+    "cpu": 3072,
+    "dockerLabels" : {
+      "com.dnsdock.name": "${APP_NAME}-server"
+    },
+    "dependsOn": [
+      { "containerName": "dnsdock", "condition": "START" }
+    ],
+    "dnsServers": ["172.17.0.1"],
+    "image": "${IMAGE}",
+    "repositoryCredentials": {
+      "credentialsParameter": "${DOCKER_CREDS}"
+    },
+    "ulimits": [
+    {
+      "name": "nofile",
+      "softLimit": 100000,
+      "hardLimit": 1048576
+    }
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "/ecs/service",
+        "awslogs-region": "${AWS_REGION}",
+        "awslogs-create-group": "true",
+        "awslogs-stream-prefix": "${APP_NAME}"
+      }
+    },
+    "links": ["datadog-agent:datadog-agent"],
+    "mountPoints": [
+    {
+      "containerPath": "/var/log",
+      "sourceVolume": "app_logs",
+      "readOnly": false
+    },
+    {
+      "containerPath": "/tmp/shm/image_cache/",
+      "sourceVolume": "image_cache",
+      "readOnly": false
+    },
+    {
+      "sourceVolume": "edge_cache_volume",
+      "containerPath": "/tmp/shm/edge_cache",
+      "readOnly": false
+    }
+    ],
+    "sharedMemorySize": 4096,
+    "environment": [
+    {
+      "name": "APP_VERSION",
+      "value": "${APP_VERSION}"
+    },
+    {
+      "name": "DD_LOGS_INJECTION",
+      "value": "true"
+    },
+    {
+      "name": "S3_BASE_URL",
+      "value": "${S3_BASE_URL}"
+    },
+    {
+      "name": "DD_TRACE_128_BIT_TRACEID_GENERATION_ENABLED",
+      "value": "false"
+    },
+    {
+      "name": "ORIGINS",
+      "value": "${CORS_ORIGINS}"
+    },
+    {
+      "name": "QSIZE",
+      "value": "${QSIZE}"
+    },
+    {
+      "name": "ENVIRONMENT",
+      "value": "${ENVIRONMENT}"
+    },
+    {
+      "name": "DOMAIN",
+      "value": "${DOMAIN}"
+    },
+    {
+      "name": "PG_URL",
+      "value": "${PG_URL}"
+    },
+    {
+      "name": "STATSD_ADDR",
+      "value": "${STATSD_ADDR}"
+    }
+    ],
+    "portMappings": [
+    {
+      "containerPort": ${APP_PORT},
+      "hostPort": ${APP_PORT},
+      "protocol": "tcp"
+    }
+    ]
+  }
+]

@@ -1,0 +1,48 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    schema: "internal/migrations"
+    queries: 'src/services/mediametadata/queries.sql'
+    gen:
+      go:
+        package: mediametadata
+        out: 'src/services/mediametadata'
+        emit_db_tags: true
+        overrides:
+          - db_type: jsonb
+            nullable: false
+            go_type:
+              type: "[]byte"
+              pointer: false
+          - column: processed_media_metadatas.processed_at
+            nullable: true
+            go_type:
+              type: "time.Time"
+              pointer: true
+
+
+  - engine: "postgresql"
+    schema: "internal/schemas/generation.schema.sql"
+    queries: 'src/services/generations/queries.sql'
+    gen:
+      go:
+        package: generations
+        out: 'src/services/generations'
+        emit_db_tags: true
+        sql_package: "pgx/v5"
+        overrides:
+          - db_type: pg_catalog.varchar
+            nullable: true
+            go_type:
+              type: string
+              pointer: true
+          - db_type: pg_catalog.timestamptz
+            nullable: false
+            go_type:
+              type: "time.Time"
+              pointer: false
+          - column: generation.published_at
+            nullable: true
+            go_type:
+              type: "time.Time"
+              pointer: true

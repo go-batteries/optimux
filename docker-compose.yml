@@ -1,0 +1,56 @@
+services:
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "8069:80"
+    volumes:
+      - ./infra/dev.nginx.conf:/etc/nginx/nginx.conf:ro
+    tmpfs:
+      - /tmp/shm/edge_cache
+    networks:
+      - app_network
+    depends_on:
+      - app1
+      - app2
+      - app3
+
+  app1:
+    build:
+      context: .
+      dockerfile: ./build.Dockerfile
+    container_name: app1
+    tmpfs:
+      - /tmp/shm/image_cache
+    ports:
+      - "8811:8811"
+    networks:
+      - app_network
+
+  app2:
+    build:
+      context: .
+      dockerfile: ./build.Dockerfile
+    container_name: app2
+    tmpfs:
+      - /tmp/shm/image_cache
+    ports:
+      - "8812:8811"
+    networks:
+      - app_network
+
+  app3:
+    build:
+      context: .
+      dockerfile: ./build.Dockerfile
+    container_name: app3
+    tmpfs:
+      - /tmp/shm/image_cache
+    ports:
+      - "8813:8811"
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge

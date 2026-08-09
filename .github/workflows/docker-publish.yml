@@ -1,0 +1,167 @@
+name: Build and Push Docker Images
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment (staging/prod)'
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - prod
+      server_version:
+        description: 'Optimux Server Pipeline'
+        required: false
+        default: ""
+      image_worker_version:
+        description: 'Energon Image Worker Pipeline'
+        required: false
+        default: ""
+      video_worker_version:
+        description: 'Energon Video Worker Pipeline'
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+env:
+  PLATFORMS: linux/amd64
+  BUILD_OS: linux
+  BUILD_ARCH: amd64
+  DOCKER_BUILDKIT: 1
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: optimux-server
+            dockerfile_base: resty.Dockerfile
+            registry: dockerhub
+            image: optimux/optimux-server
+            provenance: false
+            version_input: server_version
+            worker_type: ""
+          - name: energon-worker-image
+            dockerfile_base: worker.Dockerfile
+            registry: ecr
+            image: energon-worker-image
+            provenance: true
+            version_input: image_worker_version
+            worker_type: image
+          - name: energon-worker-video
+            dockerfile_base: worker.Dockerfile
+            registry: ecr
+            image: energon-worker-video
+            provenance: true
+            version_input: video_worker_version
+            worker_type: video
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: docker/setup-buildx-action@v2
+
+      # DockerHub login
+      - name: DockerHub Login
+        if: matrix.registry == 'dockerhub'
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # AWS ECR login
+      - name: Configure AWS Credentials
+        if: matrix.registry == 'ecr'
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        if: matrix.registry == 'ecr'
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and Push ${{ matrix.name }}
+        run: |
+          VERSION_INPUT=${{ matrix.version_input }}
+          APP_VERSION="${{ github.event.inputs[matrix.version_input] }}"
+
+          if [ -z "$APP_VERSION" ]; then
+            echo "No version provided for $VERSION_INPUT — skipping."
+            exit 0
+          fi
+
+          # Determine Dockerfile based on environment
+          ENVIRONMENT="${{ github.event.inputs.environment }}"
+          DOCKERFILE_BASE="${{ matrix.dockerfile_base }}"
+          
+          # Extract base name and extension
+          BASE_NAME="${DOCKERFILE_BASE%.*}"
+          EXTENSION="${DOCKERFILE_BASE##*.}"
+          
+          # Construct environment-specific Dockerfile name
+          ENV_DOCKERFILE="${ENVIRONMENT}.${DOCKERFILE_BASE}"
+          
+          # Check if environment-specific Dockerfile exists, otherwise use base
+          if [ -f "$ENV_DOCKERFILE" ]; then
+            DOCKERFILE="$ENV_DOCKERFILE"
+            echo "Using environment-specific Dockerfile: $DOCKERFILE"
+          else
+            DOCKERFILE="$DOCKERFILE_BASE"
+            echo "Environment-specific Dockerfile not found, using base: $DOCKERFILE"
+          fi
+
+          if [ "${{ matrix.registry }}" = "ecr" ]; then
+            IMAGE="${{ secrets.ECR_URL }}/${{ matrix.image }}:${APP_VERSION}"
+          else
+            IMAGE="${{ matrix.image }}:${APP_VERSION}"
+          fi
+
+          echo "Building $IMAGE from $DOCKERFILE"
+
+          PROVENANCE_FLAG=""
+          if [ "${{ matrix.provenance }}" = "false" ]; then
+            PROVENANCE_FLAG="--provenance=false"
+          fi
+
+          # Add WORKER_APP build arg if worker_type is set
+          WORKER_ARG=""
+          if [ -n "${{ matrix.worker_type }}" ]; then
+            WORKER_ARG="--build-arg WORKER_APP=${{ matrix.worker_type }}"
+          fi
+
+          docker build \
+            --platform=${{ env.PLATFORMS }} \
+           $PROVENANCE_FLAG \
+            --build-arg GOOS=${{ env.BUILD_OS }} \
+            --build-arg GOARCH=${{ env.BUILD_ARCH }} \
+            --build-arg BUILD_ARCH=${{ env.BUILD_ARCH }} \
+            --build-arg BUILD_OS=${{ env.BUILD_OS }} \
+            --build-arg APP_VERSION=${APP_VERSION} \
+            $WORKER_ARG \
+            -t $IMAGE -f $DOCKERFILE .
+
+          docker push $IMAGE
+          docker image rm $IMAGE
+
+          TAG_NAME="${APP_VERSION}"
+          TAG_MESSAGE="Build and deploy of ${{ matrix.name }}\n\n- Image: ${{ matrix.image }}:${APP_VERSION}"
+
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git fetch --tags
+
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Tag $TAG_NAME already exists, skipping."
+          else
+            echo "Creating annotated git tag: $TAG_NAME"
+            git tag -a "$TAG_NAME" -m "$TAG_MESSAGE"
+            git push origin "$TAG_NAME"
+          fi
