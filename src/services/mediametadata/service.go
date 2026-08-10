@@ -7,7 +7,7 @@ import (
 	"log"
 
 	"github.com/go-batteries/slicendice"
-	"github.com/roverxio/optimux/src/shared"
+	"github.com/go-batteries/optimux/src/shared"
 )
 
 type MetadataService interface {

@@ -14,10 +14,10 @@ import (
 	"strings"
 
 	"github.com/go-batteries/slicendice"
-	"github.com/roverxio/optimux/src/config"
-	"github.com/roverxio/optimux/src/registry"
-	"github.com/roverxio/optimux/src/services/mediametadata"
-	"github.com/roverxio/optimux/src/shared"
+	"github.com/go-batteries/optimux/src/config"
+	"github.com/go-batteries/optimux/src/registry"
+	"github.com/go-batteries/optimux/src/services/mediametadata"
+	"github.com/go-batteries/optimux/src/shared"
 	"golang.org/x/net/http2"
 )
 

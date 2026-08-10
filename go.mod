@@ -1,4 +1,4 @@
-module github.com/roverxio/optimux
+module github.com/go-batteries/optimux
 
 go 1.23.3
 

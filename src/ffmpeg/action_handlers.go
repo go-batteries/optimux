@@ -3,7 +3,7 @@ package ffmpeg
 import (
 	"context"
 
-	"github.com/roverxio/optimux/src/mediahose"
+	"github.com/go-batteries/optimux/src/mediahose"
 )
 
 // ActionHandler defines the interface for action-specific handling

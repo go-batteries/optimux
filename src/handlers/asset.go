@@ -14,11 +14,11 @@ import (
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/go-batteries/slicendice"
-	"github.com/roverxio/optimux/src/config"
-	"github.com/roverxio/optimux/src/encoders"
-	"github.com/roverxio/optimux/src/mediahose"
-	"github.com/roverxio/optimux/src/services/mediametadata"
-	"github.com/roverxio/optimux/src/shared"
+	"github.com/go-batteries/optimux/src/config"
+	"github.com/go-batteries/optimux/src/encoders"
+	"github.com/go-batteries/optimux/src/mediahose"
+	"github.com/go-batteries/optimux/src/services/mediametadata"
+	"github.com/go-batteries/optimux/src/shared"
 )
 
 type S3ProxyImageHandler struct {

@@ -12,11 +12,11 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/roverxio/optimux/src/config"
-	"github.com/roverxio/optimux/src/encoders"
-	"github.com/roverxio/optimux/src/ffmpeg"
-	"github.com/roverxio/optimux/src/mediahose"
-	"github.com/roverxio/optimux/src/shared"
+	"github.com/go-batteries/optimux/src/config"
+	"github.com/go-batteries/optimux/src/encoders"
+	"github.com/go-batteries/optimux/src/ffmpeg"
+	"github.com/go-batteries/optimux/src/mediahose"
+	"github.com/go-batteries/optimux/src/shared"
 )
 
 // VideoSpriteHandler handles video sprite and WebVTT requests

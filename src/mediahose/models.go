@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/roverxio/optimux/src/encoders"
-	"github.com/roverxio/optimux/src/shared"
+	"github.com/go-batteries/optimux/src/encoders"
+	"github.com/go-batteries/optimux/src/shared"
 )
 
 type EventCallback func(ctx context.Context, data any) error

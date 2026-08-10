@@ -19,3 +19,5 @@ bootstrap/
 tmp/
 
 *.DS_Store
+
+.env.*

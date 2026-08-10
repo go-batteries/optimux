@@ -8,7 +8,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/roverxio/optimux/src/shared"
+	"github.com/go-batteries/optimux/src/shared"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )

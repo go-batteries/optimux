@@ -13,12 +13,12 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/roverxio/optimux/src/encoders"
-	"github.com/roverxio/optimux/src/energon"
-	"github.com/roverxio/optimux/src/mediahose"
-	"github.com/roverxio/optimux/src/shared"
+	"github.com/go-batteries/optimux/src/encoders"
+	"github.com/go-batteries/optimux/src/energon"
+	"github.com/go-batteries/optimux/src/mediahose"
+	"github.com/go-batteries/optimux/src/shared"
 
-	appcfg "github.com/roverxio/optimux/src/config"
+	appcfg "github.com/go-batteries/optimux/src/config"
 )
 
 var (

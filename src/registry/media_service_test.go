@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/roverxio/optimux/src/config"
+	"github.com/go-batteries/optimux/src/config"
 	"github.com/stretchr/testify/require"
 )
 

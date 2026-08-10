@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/roverxio/optimux/src/config"
-	"github.com/roverxio/optimux/src/shared"
+	"github.com/go-batteries/optimux/src/config"
+	"github.com/go-batteries/optimux/src/shared"
 )
 
 const (

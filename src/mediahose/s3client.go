@@ -15,7 +15,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/roverxio/optimux/src/shared"
+	"github.com/go-batteries/optimux/src/shared"
 )
 
 var httpClient = &http.Client{

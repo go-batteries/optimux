@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/roverxio/optimux/src/mediahose"
+	"github.com/go-batteries/optimux/src/mediahose"
 )
 
 // CompressionActionHandler handles video compression actions

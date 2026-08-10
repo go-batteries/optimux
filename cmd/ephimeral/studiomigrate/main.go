@@ -14,11 +14,11 @@ import (
 
 	"github.com/davidbyttow/govips/v2/vips"
 	"github.com/jackc/pgx/v5"
-	"github.com/roverxio/optimux/src/config"
-	"github.com/roverxio/optimux/src/mediahose"
-	"github.com/roverxio/optimux/src/services/generations"
-	"github.com/roverxio/optimux/src/services/mediametadata"
-	"github.com/roverxio/optimux/src/shared"
+	"github.com/go-batteries/optimux/src/config"
+	"github.com/go-batteries/optimux/src/mediahose"
+	"github.com/go-batteries/optimux/src/services/generations"
+	"github.com/go-batteries/optimux/src/services/mediametadata"
+	"github.com/go-batteries/optimux/src/shared"
 
 	_ "net/http/pprof"
 )

@@ -12,11 +12,11 @@ import (
 	"time"
 
 	"github.com/go-batteries/slicendice"
-	"github.com/roverxio/optimux/src/config"
-	"github.com/roverxio/optimux/src/encoders"
-	"github.com/roverxio/optimux/src/mediahose"
-	"github.com/roverxio/optimux/src/services/mediametadata"
-	"github.com/roverxio/optimux/src/shared"
+	"github.com/go-batteries/optimux/src/config"
+	"github.com/go-batteries/optimux/src/encoders"
+	"github.com/go-batteries/optimux/src/mediahose"
+	"github.com/go-batteries/optimux/src/services/mediametadata"
+	"github.com/go-batteries/optimux/src/shared"
 )
 
 type BatchedMediaHandler struct {

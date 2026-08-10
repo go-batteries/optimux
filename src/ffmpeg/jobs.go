@@ -8,8 +8,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/roverxio/optimux/src/encoders"
-	"github.com/roverxio/optimux/src/shared"
+	"github.com/go-batteries/optimux/src/encoders"
+	"github.com/go-batteries/optimux/src/shared"
 )
 
 // VideoJob represents a video processing task following the existing Job pattern

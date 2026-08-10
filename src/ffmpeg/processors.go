@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/roverxio/optimux/src/shared"
+	"github.com/go-batteries/optimux/src/shared"
 )
 
 // FFmpegProcessor interface for different video processing operations

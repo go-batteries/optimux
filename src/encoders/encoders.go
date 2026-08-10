@@ -11,7 +11,7 @@ import (
 	"net/http"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/roverxio/optimux/src/shared"
+	"github.com/go-batteries/optimux/src/shared"
 )
 
 // Image processing request structure

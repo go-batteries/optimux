@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/DataDog/datadog-go/v5/statsd"
-	"github.com/roverxio/optimux/src/config"
+	"github.com/go-batteries/optimux/src/config"
 )
 
 var (

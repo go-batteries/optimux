@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/roverxio/optimux/src/mediahose"
+	"github.com/go-batteries/optimux/src/mediahose"
 )
 
 // S3VideoEvent represents an S3 event for video processing

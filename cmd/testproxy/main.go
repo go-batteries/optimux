@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/roverxio/optimux/src/config"
-	"github.com/roverxio/optimux/src/services/mediametadata"
-	"github.com/roverxio/optimux/src/shared"
+	"github.com/go-batteries/optimux/src/config"
+	"github.com/go-batteries/optimux/src/services/mediametadata"
+	"github.com/go-batteries/optimux/src/shared"
 )
 
 const feedResponse = `

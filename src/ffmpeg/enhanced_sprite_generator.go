@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/roverxio/optimux/src/shared"
+	"github.com/go-batteries/optimux/src/shared"
 )
 
 // EnhancedSpriteGenerator uses the new executor pattern while maintaining compatibility

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/roverxio/optimux/src/mediahose"
+	"github.com/go-batteries/optimux/src/mediahose"
 )
 
 const (

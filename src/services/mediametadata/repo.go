@@ -16,7 +16,7 @@ import (
 	_ "github.com/doug-martin/goqu/v9/dialect/postgres"
 	"github.com/go-batteries/slicendice"
 	"github.com/lib/pq"
-	"github.com/roverxio/optimux/src/shared"
+	"github.com/go-batteries/optimux/src/shared"
 )
 
 type SizeFormatTuple struct {

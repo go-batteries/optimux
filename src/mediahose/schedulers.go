@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/roverxio/optimux/src/encoders"
-	"github.com/roverxio/optimux/src/services/mediametadata"
-	"github.com/roverxio/optimux/src/shared"
+	"github.com/go-batteries/optimux/src/encoders"
+	"github.com/go-batteries/optimux/src/services/mediametadata"
+	"github.com/go-batteries/optimux/src/shared"
 )
 
 type Worker[T any] interface {

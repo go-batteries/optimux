@@ -8,9 +8,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/roverxio/optimux/src/config"
-	md "github.com/roverxio/optimux/src/services/mediametadata"
-	"github.com/roverxio/optimux/src/shared"
+	"github.com/go-batteries/optimux/src/config"
+	md "github.com/go-batteries/optimux/src/services/mediametadata"
+	"github.com/go-batteries/optimux/src/shared"
 )
 
 type MediaDistributionHandler struct {

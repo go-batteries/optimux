@@ -4,7 +4,7 @@ import (
 	"context"
 	"log"
 
-	"github.com/roverxio/optimux/src/mediahose"
+	"github.com/go-batteries/optimux/src/mediahose"
 )
 
 // SpriteActionHandler handles sprite generation actions

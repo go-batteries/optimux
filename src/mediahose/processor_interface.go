@@ -4,8 +4,8 @@ import (
 	"context"
 	"log"
 
-	"github.com/roverxio/optimux/src/encoders"
-	"github.com/roverxio/optimux/src/shared"
+	"github.com/go-batteries/optimux/src/encoders"
+	"github.com/go-batteries/optimux/src/shared"
 )
 
 // JobProcessor interface for processing different types of media jobs

@@ -3,7 +3,7 @@ package ffmpeg
 import (
 	"context"
 
-	"github.com/roverxio/optimux/src/mediahose"
+	"github.com/go-batteries/optimux/src/mediahose"
 )
 
 // Factory Integration Layer

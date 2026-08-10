@@ -2,6 +2,10 @@
 
 optimze images on the fly.
 
+`go get github.com/go-batteries/optimux`
+
+Licensed under [AGPL-3.0](./LICENSE).
+
 ## api
 
 Base URL: `https://hostname/resize?image_url=some_url`

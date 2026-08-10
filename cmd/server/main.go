@@ -17,12 +17,12 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/davidbyttow/govips/v2/vips"
 
-	appcfg "github.com/roverxio/optimux/src/config"
-	"github.com/roverxio/optimux/src/encoders"
-	"github.com/roverxio/optimux/src/ffmpeg"
-	"github.com/roverxio/optimux/src/handlers"
-	"github.com/roverxio/optimux/src/mediahose"
-	"github.com/roverxio/optimux/src/shared"
+	appcfg "github.com/go-batteries/optimux/src/config"
+	"github.com/go-batteries/optimux/src/encoders"
+	"github.com/go-batteries/optimux/src/ffmpeg"
+	"github.com/go-batteries/optimux/src/handlers"
+	"github.com/go-batteries/optimux/src/mediahose"
+	"github.com/go-batteries/optimux/src/shared"
 	"golang.org/x/net/http2"
 
 	_ "github.com/lib/pq"

@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/roverxio/optimux/src/config"
-	"github.com/roverxio/optimux/src/encoders"
-	"github.com/roverxio/optimux/src/mediahose"
+	"github.com/go-batteries/optimux/src/config"
+	"github.com/go-batteries/optimux/src/encoders"
+	"github.com/go-batteries/optimux/src/mediahose"
 )
 
 // VideoAssetHandler routes video requests to appropriate handlers based on format parameter

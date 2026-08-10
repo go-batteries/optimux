@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/roverxio/optimux/src/mediahose"
+	"github.com/go-batteries/optimux/src/mediahose"
 )
 
 // VideoWorker processes video jobs using the existing worker pattern

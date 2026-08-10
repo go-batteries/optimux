@@ -8,8 +8,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/roverxio/optimux/src/mediahose"
-	"github.com/roverxio/optimux/src/shared"
+	"github.com/go-batteries/optimux/src/mediahose"
+	"github.com/go-batteries/optimux/src/shared"
 )
 
 const (

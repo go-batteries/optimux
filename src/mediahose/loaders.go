@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/davidbyttow/govips/v2/vips"
-	"github.com/roverxio/optimux/src/shared"
+	"github.com/go-batteries/optimux/src/shared"
 )
 
 // LoadImageStrategy defines the contract for different image-loading strategies
