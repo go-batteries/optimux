@@ -17,11 +17,20 @@ type Worker[T any] interface {
 	Work(ctx context.Context, jobQueueCh <-chan T)
 }
 
+// RetireAwareWorker lets a worker opt into retire-at-idle handshaking.
+// Workers that don't implement this fall back to legacy ctx-cancel retirement.
+type RetireAwareWorker interface {
+	SetRetireCh(chan chan bool)
+}
+
 // FetchWorker downloads images and processes them
 type FetchWorker struct {
 	Idx        int64
 	CloserChan chan int64
+	RetireCh   chan chan bool
 }
+
+func (fw *FetchWorker) SetRetireCh(ch chan chan bool) { fw.RetireCh = ch }
 
 // Process Media
 func (fw *FetchWorker) Work(ctx context.Context, jobQueueChan <-chan *Job) {
@@ -33,6 +42,15 @@ func (fw *FetchWorker) Work(ctx context.Context, jobQueueChan <-chan *Job) {
 		select {
 		case <-ctx.Done():
 			log.Println("FetchWorker exiting...")
+			return
+		case retireReq := <-fw.RetireCh:
+			// Idle boundary: we only get here when not mid-job.
+			// Ack via send, never close (scaler owns the ack channel).
+			select {
+			case retireReq <- true:
+			default:
+			}
+			log.Println("FetchWorker retiring at idle boundary...")
 			return
 		case job := <-jobQueueChan:
 			log.Println("Fetching media:", job.MediaType, job.ImagePath, "quality", job.Quality, "format", job.Format)
@@ -251,6 +269,17 @@ func (bw *BatchWorker) Work(ctx context.Context, jobQueueChan <-chan *BatchedJob
 	}
 }
 
+// WorkerSlot tracks one live worker in creation order.
+// Tail of DynamicScaler.workers is the newest slot (LIFO retire target).
+type WorkerSlot[T any] struct {
+	Idx      int64
+	Retiring bool // marked for retirement; reclaimed only on exit notify
+
+	worker Worker[T]
+	cancel context.CancelFunc
+	retire chan chan bool // created & owned by the scaler; never closed
+}
+
 // DynamicScaler manages workers dynamically
 type DynamicScaler[T any] struct {
 	WorkerFactory      func(idx int64, done chan int64) Worker[T]
@@ -259,31 +288,76 @@ type DynamicScaler[T any] struct {
 	MaxWorkers         int
 	ScaleUpThreshold   int
 	ScaleDownThreshold int
-	mu                 sync.RWMutex
-	ActiveWorkers      int
-	nextIdx            int64
-	cancelFuncs        map[int64]context.CancelFunc
-	workerCloseChan    chan int64
 	ScaleSigChan       chan struct{}
 	Name               string
+
+	CheckInterval time.Duration // scale() cadence; default 5s
+	ScaleCooldown time.Duration // min time between scale-up/down; default 30s
+	RetireGrace   time.Duration // wait before cancel-nudge; default 2s
+
+	mu              sync.RWMutex
+	workers         []*WorkerSlot[T] // creation order → tail = newest
+	nextIdx         int64
+	lastScale       time.Time
+	workerCloseChan chan int64
 }
 
 func BootStrapDynamicScalerFrom[T any](scaler *DynamicScaler[T]) *DynamicScaler[T] {
-	scaler.cancelFuncs = make(map[int64]context.CancelFunc)
-	scaler.workerCloseChan = make(chan int64, 1)
+	buf := scaler.MaxWorkers
+	if buf < 1 {
+		buf = 1
+	}
+	if scaler.MinWorkers > buf {
+		buf = scaler.MinWorkers
+	}
+	scaler.workerCloseChan = make(chan int64, buf)
+
+	if scaler.CheckInterval <= 0 {
+		scaler.CheckInterval = 5 * time.Second
+	}
+	if scaler.ScaleCooldown < 0 {
+		scaler.ScaleCooldown = 0 // explicit disable
+	} else if scaler.ScaleCooldown == 0 {
+		scaler.ScaleCooldown = 30 * time.Second // safe default
+	}
+	if scaler.RetireGrace <= 0 {
+		scaler.RetireGrace = 2 * time.Second
+	}
 
 	return scaler
+}
+
+func countLive[T any](workers []*WorkerSlot[T]) int {
+	live := 0
+	for _, wsl := range workers {
+		if !wsl.Retiring {
+			live++
+		}
+	}
+	return live
+}
+
+// ActiveCount returns the current number of live (non-retiring) workers.
+// It is safe for concurrent reads, unlike a raw counter field.
+func (ds *DynamicScaler[T]) ActiveCount() int {
+	ds.mu.RLock()
+	defer ds.mu.RUnlock()
+	return countLive(ds.workers)
 }
 
 // Start monitoring and scaling workers
 func (ds *DynamicScaler[T]) Start(ctx context.Context) {
 	log.Println("starting auto scaled workers", ds.Name)
 
+	ds.mu.Lock()
 	for i := 0; i < ds.MinWorkers; i++ {
-		ds.addWorker(ctx)
+		ds.addWorkerLocked(ctx)
 	}
+	ds.mu.Unlock()
 
 	go func() {
+		ticker := time.NewTicker(ds.CheckInterval)
+		defer ticker.Stop()
 		for {
 			select {
 			case <-ctx.Done():
@@ -292,10 +366,10 @@ func (ds *DynamicScaler[T]) Start(ctx context.Context) {
 				return
 			case idx := <-ds.workerCloseChan:
 				ds.removeWorkerByIdx(idx)
-				ds.scale(ctx)
+				ds.scale(ctx) // floor bypass handles crash refill
 			case <-ds.ScaleSigChan:
 				ds.scale(ctx)
-			case <-time.After(5 * time.Second):
+			case <-ticker.C:
 				ds.scale(ctx)
 			}
 		}
@@ -308,105 +382,154 @@ func (ds *DynamicScaler[T]) scale(ctx context.Context) {
 	defer ds.mu.Unlock()
 
 	queueLen := len(ds.Queue)
+	live := countLive(ds.workers)
+	total := len(ds.workers)
 
 	ins := shared.I()
 	tags := shared.GetServerTags()
 
 	ins.Gauge(shared.EventOnTheFlyQLen, float64(queueLen), tags, 1)
-	ins.Gauge(shared.EventScalerWorkerCount, float64(ds.ActiveWorkers), tags, 1)
+	ins.Gauge(shared.EventScalerWorkerCount, float64(live), tags, 1)
 
-	// changed := false
-	// log.Println("checking if workers need to scale", ds.Name, queueLen, ds.ScaleUpThreshold,
-	// 	ds.ScaleDownThreshold, ds.ActiveWorkers, ds.MaxWorkers)
+	// Floor recovery always allowed — do not leave the pool empty after crashes.
+	belowFloor := live < ds.MinWorkers && total < ds.MaxWorkers
 
-	if queueLen > ds.ScaleUpThreshold && ds.ActiveWorkers < ds.MaxWorkers {
-		log.Printf("🌀 Scaling up worker for %s...", ds.Name)
-		ds.addWorker(ctx)
-
-		ins.Incr(shared.EventScalerScaleUp, tags, 1)
+	if !belowFloor && ds.ScaleCooldown > 0 && time.Since(ds.lastScale) < ds.ScaleCooldown {
 		return
 	}
 
-	if queueLen < ds.ScaleDownThreshold && ds.ActiveWorkers > ds.MinWorkers {
+	switch {
+	case queueLen > ds.ScaleUpThreshold && total < ds.MaxWorkers:
+		log.Printf("🌀 Scaling up worker for %s...", ds.Name)
+		ds.addWorkerLocked(ctx)
+		ds.lastScale = time.Now()
+
+		ins.Incr(shared.EventScalerScaleUp, tags, 1)
+	case queueLen < ds.ScaleDownThreshold && live > ds.MinWorkers:
 		log.Printf("🔴 Scaling down worker for %s...", ds.Name)
-		ds.removeWorker()
+		ds.retireWorkerLocked()
+		ds.lastScale = time.Now()
 
 		ins.Incr(shared.EventScalerScaleDown, tags, 1)
-		return
-	}
-
-	if queueLen < ds.ScaleUpThreshold && ds.ActiveWorkers < ds.MinWorkers {
+	case belowFloor:
 		// workers have kept dying, yet queue < threshold
 		log.Printf("🌀 Scaling up worker for %s...", ds.Name)
-		ds.addWorker(ctx)
+		ds.addWorkerLocked(ctx)
+		ds.lastScale = time.Now()
 
 		ins.Incr(shared.EventScalerScaleUp, tags, 1)
 	}
-
-	// log.Println("changed?", changed)
 }
 
-// Adds a new worker with a cancelable context
-func (ds *DynamicScaler[T]) addWorker(ctx context.Context) {
+// Adds a new worker with a cancelable context. Caller must hold ds.mu.
+func (ds *DynamicScaler[T]) addWorkerLocked(ctx context.Context) {
 	worker := ds.WorkerFactory(ds.nextIdx, ds.workerCloseChan)
-
 	workerCtx, cancel := context.WithCancel(ctx)
-	ds.cancelFuncs[ds.nextIdx] = cancel
+	retire := make(chan chan bool, 1) // scaler-owned; never closed
 
-	go worker.Work(workerCtx, ds.Queue)
+	if rw, ok := worker.(RetireAwareWorker); ok {
+		rw.SetRetireCh(retire)
+	}
 
+	wsl := &WorkerSlot[T]{
+		Idx: ds.nextIdx, worker: worker, cancel: cancel, retire: retire,
+	}
+	ds.workers = append(ds.workers, wsl)
 	ds.nextIdx++
-	ds.ActiveWorkers++
+	go worker.Work(workerCtx, ds.Queue)
 }
 
-// Removes a worker gracefully
-func (ds *DynamicScaler[T]) removeWorker() {
-	if ds.ActiveWorkers <= ds.MinWorkers {
-		log.Println("Cannot scale down below minimum workers", ds.Name)
+// newestNonRetiring scans tail → head for the LIFO retire target. Caller must hold ds.mu.
+func (ds *DynamicScaler[T]) newestNonRetiring() *WorkerSlot[T] {
+	for i := len(ds.workers) - 1; i >= 0; i-- {
+		if !ds.workers[i].Retiring {
+			return ds.workers[i]
+		}
+	}
+	return nil
+}
+
+// retireWorkerLocked marks the newest live worker for retirement and requests
+// it retire at its next idle boundary. Caller must hold ds.mu.
+func (ds *DynamicScaler[T]) retireWorkerLocked() {
+	wsl := ds.newestNonRetiring()
+	if wsl == nil {
+		return
+	}
+	wsl.Retiring = true
+	log.Println(ds.Name, "retiring worker", wsl.Idx)
+
+	if _, ok := wsl.worker.(RetireAwareWorker); !ok || wsl.retire == nil {
+		wsl.cancel() // legacy: ctx-cancel retire
 		return
 	}
 
-	// Select the first available worker to terminate
-	for idx, cancel := range ds.cancelFuncs {
-		cancel() // Cancel the worker context
-		delete(ds.cancelFuncs, idx)
-		ds.ActiveWorkers--
-		log.Println(ds.Name, "Worker removed:", idx, "Remaining Active Workers:", ds.ActiveWorkers)
+	ack := make(chan bool, 1)
+	select {
+	case wsl.retire <- ack:
+		// Request queued. Worker will ack when it next parks idle.
+	default:
+		// Buffer full (should not happen: one retire per slot). Nudge.
+		wsl.cancel()
 		return
+	}
+
+	grace := ds.RetireGrace
+	go func() {
+		timer := time.NewTimer(grace)
+		defer timer.Stop()
+		select {
+		case <-ack:
+			log.Println(ds.Name, "worker", wsl.Idx, "acked retirement")
+			// Do not close(ack): worker may race a late send; GC is enough
+			// for a 1-buffer chan that nobody else receives from.
+		case <-timer.C:
+			// Still mid-job after grace. Cancel is a *nudge*, not the reclaim.
+			// Reclaim still happens only on CloserChan exit notify.
+			wsl.cancel()
+		}
+	}()
+}
+
+// findSlot returns the slot for idx, or nil. Caller must hold ds.mu.
+func (ds *DynamicScaler[T]) findSlot(idx int64) *WorkerSlot[T] {
+	for _, wsl := range ds.workers {
+		if wsl.Idx == idx {
+			return wsl
+		}
+	}
+	return nil
+}
+
+// dropSlot removes the slot for idx from the registry. Caller must hold ds.mu.
+func (ds *DynamicScaler[T]) dropSlot(idx int64) {
+	for i, wsl := range ds.workers {
+		if wsl.Idx == idx {
+			ds.workers = append(ds.workers[:i], ds.workers[i+1:]...)
+			return
+		}
 	}
 }
 
-// Remove worker by index
+// removeWorkerByIdx reclaims a worker's slot on its exit notification.
+// This is the single source of truth for registry removal.
 func (ds *DynamicScaler[T]) removeWorkerByIdx(idx int64) {
 	ds.mu.Lock()
 	defer ds.mu.Unlock()
 
-	log.Println(ds.Name, "Worker idx", idx, "died. respawning")
-
-	if idx > ds.nextIdx {
-		// not possible
-		return
+	if wsl := ds.findSlot(idx); wsl != nil {
+		ds.dropSlot(idx)
+		log.Println(ds.Name, "worker", wsl.Idx, "exited; reclaimed")
 	}
-
-	if _, ok := ds.cancelFuncs[idx]; !ok {
-		// worker has already been removed
-		return
-	}
-
-	log.Println("removing workers by id", ds.Name, ds.ActiveWorkers, ds.MinWorkers)
-
-	ds.ActiveWorkers--
-	ds.cancelFuncs[idx]()
-
-	// log.Println("now active workers", ds.Name, ds.ActiveWorkers)
-	delete(ds.cancelFuncs, idx)
 }
 
 // Gracefully shut down all workers
 func (ds *DynamicScaler[T]) shutdown() {
-	for _, cancel := range ds.cancelFuncs {
-		cancel()
+	ds.mu.Lock()
+	defer ds.mu.Unlock()
+	for _, wsl := range ds.workers {
+		wsl.cancel()
 	}
-	ds.ActiveWorkers = 0
-	ds.cancelFuncs = nil
+	ds.workers = nil
+	// do not close workerCloseChan or per-slot retire chans
 }

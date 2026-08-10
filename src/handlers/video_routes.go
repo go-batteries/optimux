@@ -129,13 +129,13 @@ func (vrh *VideoRouteHandler) handleVideoHealth(w http.ResponseWriter, r *http.R
 		"status": "healthy",
 		"workers": map[string]interface{}{
 			"video_workers": map[string]interface{}{
-				"active":     vrh.VideoScaler.ActiveWorkers,
+				"active":     vrh.VideoScaler.ActiveCount(),
 				"queue_size": len(vrh.VideoScaler.Queue),
 				"min":        vrh.VideoScaler.MinWorkers,
 				"max":        vrh.VideoScaler.MaxWorkers,
 			},
 			"batch_workers": map[string]interface{}{
-				"active":     vrh.BatchScaler.ActiveWorkers,
+				"active":     vrh.BatchScaler.ActiveCount(),
 				"queue_size": len(vrh.BatchScaler.Queue),
 				"min":        vrh.BatchScaler.MinWorkers,
 				"max":        vrh.BatchScaler.MaxWorkers,

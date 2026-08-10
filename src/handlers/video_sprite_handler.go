@@ -114,7 +114,7 @@ func (vsh *VideoSpriteHandler) Handle(cfg *config.Config, pathPrefix, env string
 		case vsh.VideoQueue <- job:
 			// Check if we need to scale up workers
 			queueUsage := float64(len(vsh.VideoQueue)) / float64(cap(vsh.VideoQueue))
-			if queueUsage > 0.75 && vsh.VideoScaler.ActiveWorkers < vsh.VideoScaler.MaxWorkers {
+			if queueUsage > 0.75 && vsh.VideoScaler.ActiveCount() < vsh.VideoScaler.MaxWorkers {
 				log.Printf("⚠️  Video queue at %.2f%% capacity, scaling up!", queueUsage*100)
 				vsh.VideoScaler.ScaleSigChan <- struct{}{}
 			}
