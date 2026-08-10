@@ -10,16 +10,17 @@ import (
 )
 
 type Config struct {
-	Domain          url.URL
-	PgURL           *url.URL
-	Port            string
-	LogFile         string
-	S3BaseURL       string
-	Origins         string
-	Env             string
-	StatsDAddr      string
-	DefaultS3Bucket string
-	AwsRegion       string
+	Domain           url.URL
+	PgURL            *url.URL
+	Port             string
+	LogFile          string
+	S3BaseURL        string
+	SourceAPIBaseURL string
+	Origins          string
+	Env              string
+	StatsDAddr       string
+	DefaultS3Bucket  string
+	AwsRegion        string
 
 	Quality         int
 	MaxPrefetch     int
@@ -103,6 +104,12 @@ func WithEnvConfigLoaderOpts() ConfigLoaderOpts {
 		if err != nil {
 			log.Fatal("invalid url provided", err)
 		}
+
+		sourceAPIBaseURL := strings.TrimRight(strings.TrimSpace(os.Getenv("SOURCE_API_BASE_URL")), "/")
+		if sourceAPIBaseURL == "" {
+			sourceAPIBaseURL = "http://localhost:8812"
+		}
+		config.SourceAPIBaseURL = sourceAPIBaseURL
 
 		qSizeStr := strings.TrimSpace(os.Getenv("QSIZE"))
 		qsize := DefaultQSize

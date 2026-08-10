@@ -5,6 +5,7 @@ BUILD_OS ?= $(shell uname -s | tr '[:upper:]' '[:lower:]')
 APP_VERSION ?= latest
 ORIGINS ?= "*"
 ENV ?= dev
+DOCKER_ORG ?= optimux
 
 tmpfs.setup:
 	mkdir -p /tmp/shm/image_cache
@@ -51,7 +52,7 @@ build.docker.app:
 		--build-arg GOARCH=$(GOARCH) \
 		--build-arg BUILD_ARCH=$(BUILD_ARCH) \
 		--build-arg BUILD_OS=$(BUILD_OS) $(BUILD_OPTS) \
-		-t optimux/optimux-server:$(APP_VERSION) -f Dockerfile .
+		-t $(DOCKER_ORG)/optimux-server:$(APP_VERSION) -f Dockerfile .
 
 # run.batch:
 # 	CGO_CFLAGS_ALLOW="-Xpreprocessor" go run -race parallels/main.go
@@ -68,12 +69,12 @@ run.docker.app:
 		-v ./tmp/shm/edge_cache:/tmp/shm/edge_cache \
 		-v ./tmp/log/:/var/log \
 		-p 8811:8811 -p 9090:80 \
-		optimux/optimux-server:$(APP_VERSION)
+		$(DOCKER_ORG)/optimux-server:$(APP_VERSION)
 
 
 push.docker.app: build.docker.app
-	docker push optimux/optimux-server:$(APP_VERSION)
-	docker image rm optimux/optimux-server:$(APP_VERSION)
+	docker push $(DOCKER_ORG)/optimux-server:$(APP_VERSION)
+	docker image rm $(DOCKER_ORG)/optimux-server:$(APP_VERSION)
 
 
 build.docker.worker:

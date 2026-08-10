@@ -85,9 +85,8 @@ func (r *OptimuxSourceRegistry) List(ctx context.Context) ([]*OptimuxSourceRecor
 	return r.records, nil
 }
 
-func DefaultOptimuxRegistry(cfg *config.Config) *OptimuxSourceRegistry {
-	// baseurl := "http://localhost:8812"
-	baseurl := "https://api.optimux.ai"
+func DefaultSourceRegistry(cfg *config.Config) *OptimuxSourceRegistry {
+	baseurl := cfg.SourceAPIBaseURL
 
 	apiSourceConfig := &APISourceConfig{
 		BaseURL:      baseurl,
@@ -100,7 +99,7 @@ func DefaultOptimuxRegistry(cfg *config.Config) *OptimuxSourceRegistry {
 			SourceType:         "api",
 			Service:            "feed",
 			Source:             "/stg/v1/media/canvas/feed",
-			SourceConfig:       shared.ToPtr(`{"base_url": "https://api.optimux.ai", "optimux_path_prefix": "optimux/assets/"}`),
+			SourceConfig:       shared.ToPtr(shared.MustJsonMarshall(map[string]string{"base_url": baseurl, "optimux_path_prefix": "optimux/assets/"})),
 			MediaExtractor:     "gjson://data.#.media.#.output",
 			MediaStoreProvider: MediaProviderS3,
 			MediaStoreConfig: shared.ToPtr(
@@ -121,7 +120,7 @@ func DefaultOptimuxRegistry(cfg *config.Config) *OptimuxSourceRegistry {
 			SourceType:         "api",
 			Service:            "feed",
 			Source:             "/stg/v1/media/studio/feed",
-			SourceConfig:       shared.ToPtr(`{"base_url": "https://api.optimux.ai", "optimux_path_prefix": "optimux/assets/"}`),
+			SourceConfig:       shared.ToPtr(shared.MustJsonMarshall(map[string]string{"base_url": baseurl, "optimux_path_prefix": "optimux/assets/"})),
 			MediaExtractor:     "gjson://data.#.media.#.output",
 			MediaStoreProvider: MediaProviderS3,
 			MediaStoreConfig: shared.ToPtr(
@@ -142,7 +141,7 @@ func DefaultOptimuxRegistry(cfg *config.Config) *OptimuxSourceRegistry {
 			SourceType:         "api",
 			Service:            "feed",
 			Source:             "/app/v1/media/canvas/feed",
-			SourceConfig:       shared.ToPtr(`{"base_url": "https://api.optimux.ai", "optimux_path_prefix": "optimux/assets/"}`),
+			SourceConfig:       shared.ToPtr(shared.MustJsonMarshall(map[string]string{"base_url": baseurl, "optimux_path_prefix": "optimux/assets/"})),
 			MediaExtractor:     "gjson://data.#.media.#.output",
 			MediaStoreProvider: MediaProviderS3,
 			MediaStoreConfig: shared.ToPtr(
@@ -163,7 +162,7 @@ func DefaultOptimuxRegistry(cfg *config.Config) *OptimuxSourceRegistry {
 			SourceType:         "api",
 			Service:            "feed",
 			Source:             "/app/v1/media/studio/feed",
-			SourceConfig:       shared.ToPtr(`{"base_url": "https://api.optimux.ai", "optimux_path_prefix": "optimux/assets/"}`),
+			SourceConfig:       shared.ToPtr(shared.MustJsonMarshall(map[string]string{"base_url": baseurl, "optimux_path_prefix": "optimux/assets/"})),
 			MediaExtractor:     "gjson://data.#.media.#.output",
 			MediaStoreProvider: MediaProviderS3,
 			MediaStoreConfig: shared.ToPtr(

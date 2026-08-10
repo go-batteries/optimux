@@ -191,7 +191,7 @@ func (vsh *VideoSpriteHandler) buildSpriteResponse(videoID, userID string, sprit
 	for i, key := range spriteKeys {
 		// Convert S3 key to public URL
 		// {env}/videos/usr_123/sprites/vid_abc/sprite_001.webp
-		// -> https://media-{env}.optimux.ai/optimux/assets/videos/usr_123/sprites/vid_abc/sprite_001.webp
+		// -> https://media-{env}.example.com/optimux/assets/videos/usr_123/sprites/vid_abc/sprite_001.webp
 		relativePath := strings.TrimPrefix(key, env+"/")
 		url := fmt.Sprintf("%s%s/%s", baseURL, pathPrefix, relativePath)
 

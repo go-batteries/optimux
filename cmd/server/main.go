@@ -309,7 +309,7 @@ func main() {
 
 		// Reverse Proxy handler
 		// proxyHandle := &handlers.ProxyHandler{
-		// 	Reg:         registry.DefaultOptimuxRegistry(cfg),
+		// 	Reg:         registry.DefaultSourceRegistry(cfg),
 		// 	Enabled:     cfg.IsEnvLocal() || true,
 		// 	MetadataSvc: svc,
 		// }

@@ -70,7 +70,7 @@ avg-cpu:  %user   %nice %system %iowait  %steal   %idle
 - On testing with an [8k image](https://images.unsplash.com/photo-1482784160316-6eb046863ece?ixlib=rb-4.0.3&q=85&fm=jpg&crop=entropy&cs=srgb&dl=jms-kFHz9Xh3PPU-unsplash.jpg)
   - with these args `&sizes=300x0&format=webp&quality=60`, render at and average of `760ms`, and
   - progressive jpeg with args `&sizes=1000x0&format=jpeg&quality=80` rendered at `1400ms`
-- This is way better than [https://ik.imagekit.io/optimux/tr:h-100,w-100/temp/unsplash.jpg](https://ik.imagekit.io/optimux/tr:h-100,w-100/temp/unsplash.jpg) at first load
+- This is way better than a comparable ImageKit transform (`tr:h-100,w-100`) on the same source image at first load
   - The same on our system is 650ms. But that can be because of the amount of request imagekit is serving
 
 - No caching is enabled at this point
