@@ -115,7 +115,7 @@ func main() {
 		MaxWorkers:         10,
 		ScaleUpThreshold:   10,
 		ScaleDownThreshold: 1,
-		ScaleSigChan:       make(chan struct{}),
+		ScaleSigChan:       make(chan struct{}, 1),
 		Name:               "ImageWorker",
 	}
 
@@ -131,7 +131,7 @@ func main() {
 		MaxWorkers:         5,
 		ScaleUpThreshold:   3,
 		ScaleDownThreshold: 0,
-		ScaleSigChan:       make(chan struct{}),
+		ScaleSigChan:       make(chan struct{}, 1),
 		Name:               "VideoWorker",
 	}
 

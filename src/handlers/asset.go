@@ -235,7 +235,10 @@ func (s *S3ProxyImageHandler) Handle(quality int, cfg *config.Config, pathPrefix
 			queueUsage := float64(len(s.JobQ)) / float64(cap(s.JobQ))
 			if queueUsage > 0.75 && s.Scaler.ActiveCount() < s.Scaler.MaxWorkers {
 				log.Printf("⚠️  Queue is at %.2f%% capacity, scaling up workers!", queueUsage*100)
-				s.Scaler.ScaleSigChan <- struct{}{}
+				select {
+				case s.Scaler.ScaleSigChan <- struct{}{}:
+				default:
+				}
 			}
 
 		case <-time.After(shared.DefaultWaitTillEnQTime):

@@ -116,7 +116,10 @@ func (vsh *VideoSpriteHandler) Handle(cfg *config.Config, pathPrefix, env string
 			queueUsage := float64(len(vsh.VideoQueue)) / float64(cap(vsh.VideoQueue))
 			if queueUsage > 0.75 && vsh.VideoScaler.ActiveCount() < vsh.VideoScaler.MaxWorkers {
 				log.Printf("⚠️  Video queue at %.2f%% capacity, scaling up!", queueUsage*100)
-				vsh.VideoScaler.ScaleSigChan <- struct{}{}
+				select {
+				case vsh.VideoScaler.ScaleSigChan <- struct{}{}:
+				default:
+				}
 			}
 
 		case <-time.After(shared.DefaultWaitTillEnQTime):

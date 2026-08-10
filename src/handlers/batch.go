@@ -215,7 +215,10 @@ func (s *BatchedMediaHandler) Handle(quality int, cfg *config.Config, pathPrefix
 			if queueUsage > 0.75 && s.Scaler.ActiveCount() < s.Scaler.MaxWorkers {
 				log.Printf("⚠️  Batcher Queue is at %.2f%% capacity, scaling up workers!", queueUsage*100)
 
-				s.Scaler.ScaleSigChan <- struct{}{}
+				select {
+				case s.Scaler.ScaleSigChan <- struct{}{}:
+				default:
+				}
 			}
 
 			if len(sizes) > 1 {

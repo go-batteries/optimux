@@ -1,5 +1,6 @@
 # Changelog
 
+- Initial solution: https://medium.com/smsjunk/handling-1-million-requests-per-minute-with-golang-f70ac505fcaa
 - Using libvips since its benchmarks are better and no need for process spawn
 - Remove caching for now
 - Add support for multiple image sizes
