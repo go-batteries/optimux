@@ -72,21 +72,17 @@ func (s3 *S3HTTPClient) DownloadImage(ctx context.Context, imageURL, cachePath s
 	}
 	defer file.Close()
 
-	// var buf bytes.Buffer
-	// multiWriter := io.MultiWriter(file, &buf)
-	// if _, err := io.Copy(multiWriter, resp.Body); err != nil {
-	// 	return nil, fmt.Errorf("failed to write image to tmpfs: %v", err)
-	// }
-	//
-	// return vips.NewImageFromReader(bytes.NewReader(buf.Bytes()))
-	buf, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to write image to tmpfs: %v", err)
-	}
+	// Single pass over the network stream: every chunk read from
+	// resp.Body is written to the tmpfs cache file as it arrives, via
+	// TeeReader, instead of buffering the whole response in memory first
+	// and only then writing it to disk. Same bytes moved either way, but
+	// this overlaps the disk write with the download instead of doing
+	// them strictly one after the other.
+	tee := io.TeeReader(resp.Body, file)
 
-	_, err = file.Write(buf)
+	buf, err := io.ReadAll(tee)
 	if err != nil {
-		return nil, fmt.Errorf("failed to write image to tmpfs: %v", err)
+		return nil, fmt.Errorf("failed to read/cache image: %v", err)
 	}
 
 	return buf, nil
