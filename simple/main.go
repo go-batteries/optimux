@@ -366,6 +366,8 @@ func FetchWorker(ctx context.Context) {
 				img, err := LoadImageFromURLWithCache(job.ImagePath)
 				if err != nil {
 					log.Println("Failed to load image:", err)
+					http.Error(job.Resp, err.Error(), http.StatusBadGateway)
+					close(job.Done)
 					continue
 				}
 
