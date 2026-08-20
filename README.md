@@ -22,14 +22,47 @@ for the same size is fast without ever pre-computing it.
 ## Real numbers
 
 Measured directly against `cmd/server` (the actual production binary,
-not a synthetic benchmark):
+not a synthetic benchmark). Two separate data sets, both real, neither
+should be read as "the" official number - see caveats below each.
 
-- A 613KB JPEG resized to 400x600 and re-encoded as WebP: **74KB, an
-  87.9% size reduction**, served in ~63ms cold.
-- 48 concurrent requests across 6 different real images, mixed sizes:
-  **all 48 succeeded, 0 rejected**, ~1s wall time total. The dynamic
-  worker scaler (2-10 workers, scales on queue depth) absorbed the
-  burst without dropping anything.
+**Sustained load** (`wrk`, single real ~1MB source image, resized to
+400x600 + re-encoded as WebP, run on a local machine, not the AWS
+deployment):
+
+| Concurrency | Req/s | Avg latency |
+|---|---|---|
+| 10 | 32.6 | 303ms |
+| 50 | 44.2 | 1.05s |
+
+*Caveats: run on a laptop (Apple M1), not the production EC2 instance -
+useful for relative before/after comparisons, not as an absolute
+production throughput claim. Also hits the same source image
+repeatedly, so the network fetch is cache-warm after the first request
+(source-image tmpfs cache) - the resize/encode work itself is NOT
+cached or skipped (that path depends on an S3 object-metadata check
+that only applies to real S3-backed deployments), so every request in
+this table did full, real libvips work. Per `Progression.md`'s own
+timing breakdown, processing costs ~7-10x more than fetching, so this
+should be close to a mixed-image number, just slightly optimistic on
+the fetch side.*
+
+**Correctness under burst**: 48 concurrent requests across 6 different
+real images, mixed sizes - all 48 succeeded, 0 rejected, ~1s wall time.
+The dynamic worker scaler (2-10 workers, scales on queue depth)
+absorbed the burst without dropping anything.
+
+**Compression**: a 613KB JPEG resized to 400x600 and re-encoded as
+WebP: 74KB, an 87.9% size reduction, ~63ms cold.
+
+**From earlier development** (see `Progression.md` for the full log):
+early iterations before the current worker-scaling architecture and
+before caching was enabled measured 2-3.3 req/s single-threaded against
+large (8K source) images on a small EC2 instance, with CPU steal up to
+8.7% observed (`iostat`) - a reminder that on shared/burstable EC2
+instance types, virtualization contention can dominate your latency
+budget before your own code does. Those numbers predate the dynamic
+scaler and streaming encoder and aren't representative of current
+performance; they're kept here as a real trace of what got fixed.
 
 ## API
 
