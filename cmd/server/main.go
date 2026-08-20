@@ -332,9 +332,14 @@ func main() {
 		Handler: http.DefaultServeMux,
 	}
 
+	ln, err := listenReusePort(ctx, "tcp", cfg.Port)
+	if err != nil {
+		log.Fatal("failed to bind with SO_REUSEPORT:", err)
+	}
+
 	if !cfg.UseHttp2 {
 		fmt.Println("Server running on", cfg.Port)
-		log.Fatal(http.ListenAndServe(cfg.Port, nil))
+		log.Fatal(server.Serve(ln))
 		return
 	}
 
@@ -361,6 +366,8 @@ func main() {
 
 	fmt.Println("TLS Server running on", cfg.Port)
 
-	log.Fatal(server.ListenAndServeTLS("server.crt", "server.key"))
+	// wrap the SO_REUSEPORT listener with TLS ourselves, rather than
+	// ListenAndServeTLS (which would open its own, non-reuseport listener)
+	log.Fatal(server.Serve(tls.NewListener(ln, tlsConfig)))
 	return
 }
